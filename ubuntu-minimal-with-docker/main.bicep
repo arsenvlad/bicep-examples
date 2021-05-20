@@ -2,8 +2,9 @@
 param location string = resourceGroup().location
 param name string
 
-@secure()
 param adminUsername string = 'azureuser'
+
+@secure()
 param adminPassword string
 
 // Variables
@@ -20,7 +21,7 @@ var vmName = 'vm${name}'
 var vmSize = 'Standard_DS2_v2'
 
 // Multiline string with cloud-init directives to install docker on the VM by passing it as base64 encoding string to customData
-var cloudInit = '''
+var cloudInitTemplate = '''
 #cloud-config
 package_update: true
 
@@ -36,7 +37,11 @@ runcmd:
     - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     - apt-get update
     - apt-get install -y docker-ce docker-ce-cli containerd.io
+    - usermod -aG docker REPLACE_WITH_VM_ADMIN_USERNAME
+    - newgrp docker
 '''
+
+var cloudInit = replace(cloudInitTemplate,'REPLACE_WITH_VM_ADMIN_USERNAME',adminUsername)
 
 // Resources
 resource vm 'Microsoft.Compute/virtualMachines@2020-06-01' = {
