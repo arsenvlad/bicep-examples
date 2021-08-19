@@ -1,5 +1,8 @@
 name: azure-deploy-loadbalancer-haports
-on: [push]
+on:
+    push:
+    schedule:
+      - cron: '5 18 * * 2' # Every week on Tuesday at 18:05
 jobs:
   loadbalancer-haports:
     runs-on: ubuntu-latest
@@ -16,7 +19,6 @@ jobs:
           export name=temp-${{ github.run_id }}-$RANDOM
           az group create --resource-group $rg --location eastus2
           az deployment group create --resource-group $rg --template-file ./loadbalancer-haports/main.bicep --parameters name="$name" adminPassword="${{ secrets.VM_PASSWORD }}" -o json --query "properties.outputs" 
-          sudo apt-get install sshpass
           az group delete --resource-group $rg --yes
       - name: Azure Logout
         run: |
