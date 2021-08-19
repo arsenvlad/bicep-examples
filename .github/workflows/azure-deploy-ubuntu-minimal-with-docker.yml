@@ -1,10 +1,10 @@
-name: azure-deploy-loadbalancer-haports
+name: azure-deploy-ubuntu-minimal-with-docker
 on:
     push:
       paths:
-        - 'loadbalancer-haports/**'
+        - 'ubuntu-minimal-with-docker/**'
     schedule:
-      - cron: '5 18 * * 2' # Every week on Tuesday at 18:05
+      - cron: '5 19 * * 2' # Every week on Tuesday at 19:05
 jobs:
   loadbalancer-haports:
     runs-on: ubuntu-latest
@@ -17,10 +17,10 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Azure Deploy
         run: |
-          export rg=temp-github${{ github.run_id }}-lb
+          export rg=temp-github${{ github.run_id }}-umd
           export name=temp-${{ github.run_id }}-$RANDOM
           az group create --resource-group $rg --location eastus2
-          az deployment group create --resource-group $rg --template-file ./loadbalancer-haports/main.bicep --parameters name="$name" adminPassword="${{ secrets.VM_PASSWORD }}" -o json --query "properties.outputs" 
+          az deployment group create --resource-group $rg --template-file ./ubuntu-minimal-with-docker/main.bicep --parameters name="$name" adminPassword="${{ secrets.VM_PASSWORD }}" -o json --query "properties.outputs" 
           az group delete --resource-group $rg --yes
       - name: Azure Logout
         run: |

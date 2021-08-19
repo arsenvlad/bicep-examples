@@ -1,0 +1,31 @@
+name: azure-deploy-vmss-windows
+on:
+    push:
+      paths:
+        - 'vmss-windows/**'
+    schedule:
+      - cron: '5 20 * * 2' # Every week on Tuesday at 20:05
+jobs:
+  loadbalancer-haports:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Azure Deploy
+        run: |
+          export rg=temp-github${{ github.run_id }}-umd
+          export name=temp-${{ github.run_id }}-$RANDOM
+          az group create --resource-group $rg --location eastus2
+          az network vnet create --resource-group $rg --address-prefixes 10.0.0.0/16 --name temp-vnet --subnet-name subnet1 --subnet-prefixes 10.0.0.0/24
+          subnetId=$(az network vnet subnet list --resource-group $rg --vnet-name temp-vnet --query "[?name=='subnet1'].id" --output tsv)
+          az deployment group create --resource-group $rg --template-file ./vmss-windows/main.bicep --parameters name="$name" adminPassword="${{ secrets.VM_PASSWORD }} instanceCount=2 subnetId=$subnetId" -o json --query "properties.outputs" 
+          az group delete --resource-group $rg --yes
+      - name: Azure Logout
+        run: |
+          az logout
+          az cache purge
+          az account clear
