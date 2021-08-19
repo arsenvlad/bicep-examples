@@ -16,4 +16,3 @@ Delete the deployed resource group
 ```bash
 az group delete --resource-group rg-vmss001
 ```
-
