@@ -6,7 +6,7 @@ on:
     schedule:
       - cron: '5 19 * * 2' # Every week on Tuesday at 19:05
 jobs:
-  loadbalancer-haports:
+  ubuntu-minimal-with-docker:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
