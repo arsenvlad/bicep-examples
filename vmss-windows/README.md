@@ -1,5 +1,7 @@
 # Virtual Machine Scale Set (VMSS) Windows
 
+[![vmss-windows](https://github.com/arsenvlad/bicep-examples/actions/workflows/azure-deploy-vmss-windows.yml/badge.svg)](https://github.com/arsenvlad/bicep-examples/actions/workflows/azure-deploy-vmss-windows.yml)
+
 Deploy Azure Virtual Machine Scale Set into an existing subnet
 
 ```bash
