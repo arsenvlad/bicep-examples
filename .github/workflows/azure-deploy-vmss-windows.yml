@@ -18,7 +18,7 @@ jobs:
       - name: Azure Deploy
         run: |
           export rg=temp-github${{ github.run_id }}-umd
-          export name=temp-${{ github.run_id }}-$RANDOM
+          export name=temp$RANDOM
           az group create --resource-group $rg --location eastus2
           az network vnet create --resource-group $rg --address-prefixes 10.0.0.0/16 --name temp-vnet --subnet-name subnet1 --subnet-prefixes 10.0.0.0/24
           subnetId=$(az network vnet subnet list --resource-group $rg --vnet-name temp-vnet --query "[?name=='subnet1'].id" --output tsv)
