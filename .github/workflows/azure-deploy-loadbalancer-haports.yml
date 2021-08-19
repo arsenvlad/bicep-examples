@@ -13,7 +13,7 @@ jobs:
           export rg=temp-github${{ github.run_id }}-lb
           az group create --resource-group $rg --location eastus2
           pwd
-          az deployment group create --resource-group $rg --template-file ./loadbalancer-haports/main.bicep --parameters name="$name" adminPassword="${{ secrets.VM_PASSWORD }}" -o json --query "properties.outputs" 
+          az deployment group create --resource-group $rg --template-file ../loadbalancer-haports/main.bicep --parameters name="$name" adminPassword="${{ secrets.VM_PASSWORD }}" -o json --query "properties.outputs" 
           sudo apt-get install sshpass
           az group delete --resource-group $rg --yes
       - name: Azure Logout
