@@ -17,7 +17,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Azure Deploy
         run: |
-          export rg=temp-github${{ github.run_id }}-umd
+          export rg=temp-github${{ github.run_id }}-vmss
           export name=temp$RANDOM
           az group create --resource-group $rg --location eastus2
           az network vnet create --resource-group $rg --address-prefixes 10.0.0.0/16 --name temp-vnet --subnet-name subnet1 --subnet-prefixes 10.0.0.0/24
