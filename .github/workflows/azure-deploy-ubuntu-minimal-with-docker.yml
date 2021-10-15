@@ -1,0 +1,29 @@
+name: azure-deploy-ubuntu-minimal-with-docker
+on:
+    push:
+      paths:
+        - 'ubuntu-minimal-with-docker/**'
+    schedule:
+      - cron: '5 19 * * 2' # Every week on Tuesday at 19:05
+jobs:
+  ubuntu-minimal-with-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Azure Deploy
+        run: |
+          export rg=temp-github${{ github.run_id }}-umd
+          export name=temp$RANDOM
+          az group create --resource-group $rg --location eastus2
+          az deployment group create --resource-group $rg --template-file ./ubuntu-minimal-with-docker/main.bicep --parameters name="$name" adminPassword="${{ secrets.VM_PASSWORD }}" -o json --query "properties.outputs" 
+          az group delete --resource-group $rg --yes
+      - name: Azure Logout
+        run: |
+          az logout
+          az cache purge
+          az account clear

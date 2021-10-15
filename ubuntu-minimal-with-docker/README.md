@@ -18,3 +18,4 @@ Check that docker is installed properly
 ```bash
 docker version
 ```
+ 

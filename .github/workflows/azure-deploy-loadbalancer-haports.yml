@@ -1,0 +1,29 @@
+name: azure-deploy-loadbalancer-haports
+on:
+    push:
+      paths:
+        - 'loadbalancer-haports/**'
+    schedule:
+      - cron: '5 18 * * 2' # Every week on Tuesday at 18:05
+jobs:
+  loadbalancer-haports:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Azure Deploy
+        run: |
+          export rg=temp-github${{ github.run_id }}-lb
+          export name=temp$RANDOM
+          az group create --resource-group $rg --location eastus2
+          az deployment group create --resource-group $rg --template-file ./loadbalancer-haports/main.bicep --parameters name="$name" adminPassword="${{ secrets.VM_PASSWORD }}" -o json --query "properties.outputs" 
+          az group delete --resource-group $rg --yes
+      - name: Azure Logout
+        run: |
+          az logout
+          az cache purge
+          az account clear
