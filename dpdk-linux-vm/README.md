@@ -30,10 +30,10 @@ Configure the runtime environment as [documented](https://docs.microsoft.com/en-
 
 ```bash
 echo 1024 | sudo tee /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages
-mkdir /mnt/huge
-mount -t hugetlbfs nodev /mnt/huge
-grep Huge /proc/meminfo
-modprobe -a ib_uverbs
+sudo mkdir /mnt/huge
+sudo mount -t hugetlbfs nodev /mnt/huge
+sudo grep Huge /proc/meminfo
+sudo modprobe -a ib_uverbs
 ```
 
 Get MAC & IP address for eth1
@@ -54,13 +54,12 @@ Run on `sender` (change the parameters to proper values)
 sudo dpdk-testpmd \
   -l 0,1 \
   -n 1 \
-  -w f8d6:00:02.0 \ # <pci address of the VF device on the sender>
-  --vdev="net_vdev_netvsc0,iface=eth1" \ # change this if using more than 2 interfaces
+  -w f8d6:00:02.0 \
+  --vdev="net_vdev_netvsc0,iface=eth1" \
   -- --port-topology=chained \
   --nb-cores 1 \
   --forward-mode=txonly \
-  --eth-peer=1,00:22:48:4d:94:a7 \ # <port id>,<receiver peer MAC address>
-  --tx-ip=10.0.2.4,10.0.2.5 \ # source and destination IPs
+  --tx-ip=10.0.2.4,10.0.2.5 \
   --stats-period 1
 ```
 
@@ -70,13 +69,12 @@ Run on `receiver` (change the parameters to proper values)
 sudo dpdk-testpmd \
   -l 0,1 \
   -n 1 \
-  -w deae:00:02.0 \ # <pci address of the VF device on the receiver>
-  --vdev="net_vdev_netvsc0,iface=eth1" \ # change this if using more than 2 interfaces
+  -w deae:00:02.0 \
+  --vdev="net_vdev_netvsc0,iface=eth1" \
   -- --port-topology=chained \
   --nb-cores 1 \
   --forward-mode=rxonly \
-  --eth-peer=1,00:22:48:4d:93:e1 \ # <port id>,<sender peer MAC address>
-  --tx-ip=10.0.2.4,10.0.2.5 \ # source and destination IPs
+  --tx-ip=10.0.2.4,10.0.2.5 \
   --stats-period 1
 ```
 
