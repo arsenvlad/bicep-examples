@@ -2,8 +2,14 @@
 param name string
 param adminUsername string = 'azureuser'
 
+@allowed([
+  'sshPublicKey'
+  'password'
+])
+param authenticationType string = 'sshPublicKey'
+
 @secure()
-param adminPassword string
+param adminPasswordOrSshPublicKey string
 
 param vmSize string = 'Standard_L8s_v2'
 param location string = resourceGroup().location
@@ -14,6 +20,17 @@ param zone string = '1'
 param instanceCount int = 2
 
 // Variables
+var linuxConfiguration = {
+  disablePasswordAuthentication: true
+  ssh: {
+    publicKeys: [
+      {
+        path: '/home/${adminUsername}/.ssh/authorized_keys'
+        keyData: adminPasswordOrSshPublicKey
+      }
+    ]
+  }
+}
 var dnsLabelPrefix = '${name}-${uniqueString(resourceGroup().id)}'
 var pipName = 'pip-${name}'
 var nsgName = 'nsg-${name}'
@@ -215,7 +232,8 @@ resource vms 'Microsoft.Compute/virtualMachines@2021-03-01' = [for i in range(0,
     osProfile: {
       computerName: '${vmName}${i}'
       adminUsername: adminUsername
-      adminPassword: adminPassword
+      adminPassword: adminPasswordOrSshPublicKey
+      linuxConfiguration: any(authenticationType == 'password' ? null : linuxConfiguration)
     }
     diagnosticsProfile: {
       bootDiagnostics: {

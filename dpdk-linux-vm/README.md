@@ -6,7 +6,7 @@ Deploy VMs with 2 NICs in a [Placement Group](https://docs.microsoft.com/en-us/a
 
 ```bash
 az group create --name rg-ppg001 --location eastus2
-az deployment group create --resource-group rg-ppg001 --template-file main.bicep --parameter vmSize=Standard_L8s_v2 instanceCount=2 -o json --query "properties.outputs"
+az deployment group create --resource-group rg-ppg001 --template-file main.bicep --parameter vmSize=Standard_L8s_v2 instanceCount=2 authenticationType=sshPublicKey -o json --query "properties.outputs"
 ```
 
 Network interfaces on the VMs
