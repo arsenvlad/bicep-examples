@@ -254,7 +254,7 @@ VMBUS ID 50: Class_ID = {44c4f61d-4444-4400-9d52-802e27ede19f} - PCI Express pas
         Rel_ID=50, target_cpu=0
 ```
 
-## Ethernet interface names mapping
+## Ethernet interface name mapping
 
 By taking the `Sysfs path` of the `Synthetic network adapter` lines from the `lsvmbus -vv`, we can lookup the Ethernet interface name assigned with it by looking in the `net` subfolder:
 
@@ -285,7 +285,7 @@ lrwxrwxrwx  1 root root 0 Jan 31 22:51 eth3 -> ../../devices/LNXSYSTM:00/LNXSYBU
 lrwxrwxrwx  1 root root 0 Jan 31 22:51 lo -> ../../devices/virtual/net/lo
 ```
 
-## Different values after VM is deallocated and start
+## Different values after VM is deallocated and started
 
 Since physical bus ids are going to change when VM moves to a different host (i.e., after deallocate and restart), the application should not use the bus id directly, but instead should use the Ethernet interface names like eth0, eth1, eth2, eth3 and can lookup the device ids and bus info if required.
 
