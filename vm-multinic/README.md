@@ -8,14 +8,14 @@ Create 2 VMs with 4 NICs each
 
 ```bash
 az group create --name rg-multinic1 --location eastus2
-az deployment group create --resource-group rg-multinic1 --template-file main.bicep --parameter vmSize=Standard_D8ds_v5 instanceCount=2 nicCount=4 authenticationType=password -o json --query "properties.outputs"
+az deployment group create --resource-group rg-multinic1 --template-file main.bicep --parameter vmSize=Standard_D16ds_v5 instanceCount=1 nicCount=8 authenticationType=password -o json --query "properties.outputs"
 ```
 
 ## Network interfaces on the VMs
 
 SSH into the VM: `ssh azureuser@PUBLIC_IP_OF_THE_VM`
 
-List network interfaces on the VMs. Ethernet interface names eth0, eth1, eth2, and eth3 map to the order that NICs are attached to the VM. This order is preserved across reboots.
+List network interfaces on the VMs. The order of the Ethernet device names (eth0, eth1, etc.) may often match the sequence of the NICs attached to the VM but it is not guaranteed (it depends on multiple things including the kernel version/configuration and the timing of device enumeration and probing during boot).
 
 ```bash
 ip addr
@@ -287,9 +287,9 @@ lrwxrwxrwx  1 root root 0 Jan 31 22:51 lo -> ../../devices/virtual/net/lo
 
 ## Different values after VM is deallocated and started
 
-Since physical bus ids are going to change when VM moves to a different host (i.e., after deallocate and restart), the application should not use the bus id directly, but instead should use the Ethernet interface names like eth0, eth1, eth2, eth3 and can lookup the device ids and bus info if required.
+Since physical bus ids are going to change when VM moves to a different host (i.e., after deallocate and restart), the application should not use the bus id directly, but instead should use the MAC addresses and Ethernet interface names like eth0, eth1, eth2, eth3 and can lookup the device ids and bus info if required.
 
-After stopped the restarting the VM in Azure portal, we can see that the bus info and PCI device ids changed:
+After stopping and restarting the VM in Azure portal, we can see that the bus info and PCI device ids changed:
 
 ```bash
 azureuser@vmav0:~$ lshw -c network -businfo
@@ -306,7 +306,7 @@ pci@d4af:00:02.0  enP54447s1  network    MT27800 Family [ConnectX-5 Virtual Func
                   eth2        network    Ethernet interface
 ```
 
-We also see that there maybe additional VMBUS IDs appearing and changing the `Synthetic network adapter` values:
+We also see that there may be additional VMBUS IDs appearing and changing the `Synthetic network adapter` values:
 
 ```text
 azureuser@vmav0:~$ lsvmbus
