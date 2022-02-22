@@ -241,7 +241,7 @@ resource inboundNatRules 'Microsoft.Network/loadBalancers/inboundNatRules@2021-0
       id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, 'frontendIpConfig')
     }
     protocol: 'Tcp'
-    frontendPort: (i+50000)
+    frontendPort: (i + 50000)
     backendPort: 22
   }
 }]
@@ -261,7 +261,7 @@ resource nics 'Microsoft.Network/networkInterfaces@2021-02-01' = [for i in range
           }
           loadBalancerBackendAddressPools: [
             {
-              id: loadBalancer.properties.backendAddressPools[0].id
+              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', lbName, 'backendPool')
             }
           ]
           loadBalancerInboundNatRules: [
@@ -335,6 +335,7 @@ resource customScripts 'Microsoft.Compute/virtualMachines/extensions@2021-11-01'
   }
 }]
 
+// Azure Private Link Service
 resource pls 'Microsoft.Network/privateLinkServices@2021-05-01' = {
   name: plsName
   location: location
@@ -343,24 +344,36 @@ resource pls 'Microsoft.Network/privateLinkServices@2021-05-01' = {
     enableProxyProtocol: false
     loadBalancerFrontendIpConfigurations: [
       {
-        id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, 'frontendIpConfig') 
+        id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, 'frontendIpConfig')
       }
     ]
     // NAT IP configurations (up to 8 for scaling ports beyond 64K per IP + backend VM combination)
-    ipConfigurations: [for i in range(0,8): {
-        name: '${subnet2Name}-nat${i}'
-        properties: {
-          privateIPAllocationMethod: 'Dynamic'
-          privateIPAddressVersion: 'IPv4'
-          subnet: {
-            id: subnet2Id
-          }
-          primary: (i == 0) ? true : false
+    ipConfigurations: [for i in range(0, 8): {
+      name: '${subnet2Name}-nat${i}'
+      properties: {
+        privateIPAllocationMethod: 'Dynamic'
+        privateIPAddressVersion: 'IPv4'
+        subnet: {
+          id: subnet2Id
         }
-      }]
+        primary: (i == 0) ? true : false
+      }
+    }]
+    // Visible to any Azure subscription that has the alias
+    visibility: {
+      subscriptions: [
+        '*'
+      ]
+    }
+    autoApproval: {
+      subscriptions: [
+        
+      ]
+    }
   }
 }
 
 // Outputs
 output fqdn string = pip.properties.dnsSettings.fqdn
 output ip string = pip.properties.ipAddress
+output alias string = pls.properties.alias
