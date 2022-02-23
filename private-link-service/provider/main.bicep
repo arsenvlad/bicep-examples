@@ -55,6 +55,35 @@ var imageReference = {
   version: 'latest'
 }
 
+// Multiline string with installation script
+// Configure NGINX to output server address, remote address, and TCP Proxy v2 address
+var installScript = '''
+#!/bin/bash
+
+sleep 30
+sudo apt update
+
+sleep 10
+sudo apt install -y nginx
+
+sudo mv /etc/nginx/nginx.conf /etc/nging/nginx.conf.backup
+
+sudo bash -c 'cat > /etc/nginx/nginx.conf' <<EOL
+events { }
+http {
+    server {
+      listen 80;
+      location / {
+        add_header Content-Type text/html;
+        return 200 '<html><body>server_addr=\$server_addr<br>remote_addr=\$remote_addr<br>x_forwarded_for=\$proxy_add_x_forwarded_for<br>proxy_protocol_addr=\$proxy_protocol_addr</body></html>';
+      }
+    }
+}
+EOL
+
+sudo systemctl restart nginx
+'''
+
 // Resources
 resource diagStorageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   name: diagStorageAccountName
@@ -192,6 +221,7 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2021-05-01' = {
           frontendPort: 80
           backendPort: 80
           idleTimeoutInMinutes: 30
+          disableOutboundSnat: true
           frontendIPConfiguration: {
             id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, 'frontendIpConfig')
           }
@@ -200,21 +230,6 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2021-05-01' = {
           }
           probe: {
             id: resourceId('Microsoft.Network/loadBalancers/probes', lbName, 'probe_http')
-          }
-        }
-      }
-      {
-        name: 'lb_https'
-        properties: {
-          protocol: 'Tcp'
-          frontendPort: 443
-          backendPort: 443
-          idleTimeoutInMinutes: 30
-          frontendIPConfiguration: {
-            id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, 'frontendIpConfig')
-          }
-          backendAddressPool: {
-            id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', lbName, 'backendPool')
           }
         }
       }
@@ -227,6 +242,25 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2021-05-01' = {
           port: 80
           intervalInSeconds: 15
           numberOfProbes: 2
+        }
+      }
+    ]
+    outboundRules: [
+      {
+        name: 'outbound'
+        properties: {
+          frontendIPConfigurations: [
+            {
+              id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, 'frontendIpConfig')
+            }
+          ]
+          backendAddressPool: {
+              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', lbName, 'backendPool')
+          }
+          protocol: 'All'
+          enableTcpReset: true
+          allocatedOutboundPorts: 60000 / instanceCount
+          idleTimeoutInMinutes: 4
         }
       }
     ]
@@ -243,6 +277,7 @@ resource inboundNatRules 'Microsoft.Network/loadBalancers/inboundNatRules@2021-0
     protocol: 'Tcp'
     frontendPort: (i + 50000)
     backendPort: 22
+    enableTcpReset: true
   }
 }]
 
@@ -328,9 +363,8 @@ resource customScripts 'Microsoft.Compute/virtualMachines/extensions@2021-11-01'
     type: 'CustomScript'
     typeHandlerVersion: '2.1'
     autoUpgradeMinorVersion: true
-    settings: {}
-    protectedSettings: {
-      commandToExecute: 'sudo apt update && sleep 10 && sudo apt install -y nginx'
+    settings: {
+      script: base64(installScript)
     }
   }
 }]

@@ -54,6 +54,16 @@ var imageReference = {
   version: 'latest'
 }
 
+// Multiline string with installation script
+var installScript = '''
+#!/bin/bash
+
+sleep 30
+sudo apt update
+
+ip addr
+'''
+
 // Resources
 resource diagStorageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   name: diagStorageAccountName
@@ -199,10 +209,10 @@ resource customScripts 'Microsoft.Compute/virtualMachines/extensions@2021-11-01'
     type: 'CustomScript'
     typeHandlerVersion: '2.1'
     autoUpgradeMinorVersion: true
-    settings: {}
-    protectedSettings: {
-      commandToExecute: 'sudo apt update && sleep 10 && ip addr'
+    settings: {
+      script: base64(installScript)
     }
+    protectedSettings: {}
   }
 }]
 
