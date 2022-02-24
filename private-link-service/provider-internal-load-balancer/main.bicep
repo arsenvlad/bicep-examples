@@ -31,6 +31,7 @@ var linuxConfiguration = {
     ]
   }
 }
+
 var dnsLabelPrefix = '${name}-${uniqueString(resourceGroup().id)}'
 var pipName = 'pip-${name}'
 var nsgName = 'nsg-${name}'
@@ -42,11 +43,16 @@ var subnet1Id = '${vnet.id}/subnets/${subnet1Name}'
 var subnet2Name = 'snet-2'
 var subnet2AddressPrefix = '10.0.2.0/24'
 var subnet2Id = '${vnet.id}/subnets/${subnet2Name}'
+var subnetBastionName = 'AzureBastionSubnet'
+var subnetBastionAddressPrefix = '10.0.254.0/26'
+var subnetBastionId = '${vnet.id}/subnets/${subnetBastionName}'
 var lbName = 'lb-${name}'
 var nicName = 'nic-${name}'
 var vmName = 'vm${name}'
 var diagStorageAccountName = 'diag${uniqueString(resourceGroup().id)}'
 var plsName = 'pls-${name}'
+var bastionName = 'bastion-${name}'
+var ngwName = 'ngw-${name}'
 
 var imageReference = {
   publisher: 'Canonical'
@@ -82,6 +88,7 @@ http {
 EOL
 
 sudo systemctl restart nginx
+
 '''
 
 // Resources
@@ -94,8 +101,8 @@ resource diagStorageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   kind: 'StorageV2'
 }
 
-resource pip 'Microsoft.Network/publicIPAddresses@2021-02-01' = {
-  name: '${pipName}-plb'
+resource pipBastion 'Microsoft.Network/publicIPAddresses@2021-02-01' = {
+  name: '${pipName}-bastion'
   location: location
   sku: {
     name: 'Standard'
@@ -104,8 +111,39 @@ resource pip 'Microsoft.Network/publicIPAddresses@2021-02-01' = {
   properties: {
     publicIPAllocationMethod: 'Static'
     dnsSettings: {
-      domainNameLabel: '${dnsLabelPrefix}-plb'
+      domainNameLabel: '${dnsLabelPrefix}-bastion'
     }
+  }
+}
+
+resource pipNatGateway 'Microsoft.Network/publicIPAddresses@2021-02-01' = {
+  name: '${pipName}-ngw'
+  location: location
+  sku: {
+    name: 'Standard'
+    tier: 'Regional'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+    dnsSettings: {
+      domainNameLabel: '${dnsLabelPrefix}-ngw'
+    }
+  }
+}
+
+
+resource natGateway 'Microsoft.Network/natGateways@2021-05-01' = {
+  name: ngwName
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIpAddresses: [
+      {
+        id: pipNatGateway.id
+      }
+    ]
   }
 }
 
@@ -115,7 +153,7 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2021-02-01' = {
   properties: {
     securityRules: [
       {
-        name: 'Allow_SSH'
+        name: 'Allow_SSH_AzureBastionSubnet'
         properties: {
           priority: 1000
           protocol: 'Tcp'
@@ -123,7 +161,7 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2021-02-01' = {
           direction: 'Inbound'
           destinationAddressPrefix: '*'
           sourcePortRange: '*'
-          sourceAddressPrefix: '*'
+          sourceAddressPrefix: subnetBastionAddressPrefix
           destinationPortRange: '22'
         }
       }
@@ -174,6 +212,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2021-02-01' = {
           networkSecurityGroup: {
             id: nsg.id
           }
+          natGateway: {
+            id: natGateway.id
+          }
         }
       }
       {
@@ -183,6 +224,38 @@ resource vnet 'Microsoft.Network/virtualNetworks@2021-02-01' = {
           privateLinkServiceNetworkPolicies: 'Disabled'
           networkSecurityGroup: {
             id: nsg.id
+          }
+        }
+      }
+      {
+        name: subnetBastionName
+        properties: {
+          addressPrefix: subnetBastionAddressPrefix
+        }
+      }
+    ]
+  }
+}
+
+resource bastion 'Microsoft.Network/bastionHosts@2021-05-01' = {
+  name: bastionName
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    scaleUnits: 2
+    enableTunneling: true
+    ipConfigurations: [
+      {
+        name: 'ipConfig1'
+        properties: {
+          publicIPAddress: {
+            id: pipBastion.id
+          }
+          privateIPAllocationMethod: 'Dynamic'
+          subnet: {
+            id: subnetBastionId
           }
         }
       }
@@ -197,13 +270,15 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2021-05-01' = {
     name: 'Standard'
   }
   properties: {
-    // Public Load Balancer (to use private load balancer, we would specify subnet instead of public IP)
+    // Internal Load Balancer (to use public load balancer, we would specify public IP instead of subnet)
     frontendIPConfigurations: [
       {
         name: 'frontendIpConfig'
         properties: {
-          publicIPAddress: {
-            id: pip.id
+          privateIPAllocationMethod: 'Dynamic'
+          privateIPAddressVersion: 'IPv4'
+          subnet: {
+            id: subnet1Id
           }
         }
       }
@@ -245,47 +320,15 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2021-05-01' = {
         }
       }
     ]
-    outboundRules: [
-      {
-        name: 'outbound'
-        properties: {
-          frontendIPConfigurations: [
-            {
-              id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, 'frontendIpConfig')
-            }
-          ]
-          backendAddressPool: {
-              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', lbName, 'backendPool')
-          }
-          protocol: 'All'
-          enableTcpReset: true
-          allocatedOutboundPorts: 60000 / instanceCount
-          idleTimeoutInMinutes: 4
-        }
-      }
-    ]
   }
 }
-
-resource inboundNatRules 'Microsoft.Network/loadBalancers/inboundNatRules@2021-05-01' = [for i in range(0, instanceCount): {
-  name: 'nat_ssh_${i}'
-  parent: loadBalancer
-  properties: {
-    frontendIPConfiguration: {
-      id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, 'frontendIpConfig')
-    }
-    protocol: 'Tcp'
-    frontendPort: (i + 50000)
-    backendPort: 22
-    enableTcpReset: true
-  }
-}]
 
 resource nics 'Microsoft.Network/networkInterfaces@2021-02-01' = [for i in range(0, instanceCount): {
   name: '${nicName}${i}'
   location: location
   dependsOn: [
     loadBalancer
+    natGateway
   ]
   properties: {
     enableAcceleratedNetworking: true
@@ -300,11 +343,6 @@ resource nics 'Microsoft.Network/networkInterfaces@2021-02-01' = [for i in range
           loadBalancerBackendAddressPools: [
             {
               id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', lbName, 'backendPool')
-            }
-          ]
-          loadBalancerInboundNatRules: [
-            {
-              id: inboundNatRules[i].id
             }
           ]
         }
@@ -411,6 +449,5 @@ resource pls 'Microsoft.Network/privateLinkServices@2021-05-01' = {
 }
 
 // Outputs
-output fqdn string = pip.properties.dnsSettings.fqdn
-output ip string = pip.properties.ipAddress
+output loadBalancerIp string = loadBalancer.properties.frontendIPConfigurations[0].properties.privateIPAddress
 output alias string = pls.properties.alias
