@@ -12,7 +12,7 @@ Create Linux VMs behind a public load balancer, install default nginx, and expos
 
 ```bash
 az group create --name rg-pls001 --location eastus2
-az deployment group create --resource-group rg-pls001 --template-file provider/main.bicep --parameter vmSize=Standard_D2s_v5 instanceCount=2 authenticationType=password -o json --query "properties.outputs"
+az deployment group create --resource-group rg-pls001 --template-file provider-public-load-balancer/main.bicep --parameter vmSize=Standard_D2s_v5 instanceCount=2 authenticationType=password -o json --query "properties.outputs"
 ```
 
 Get `alias` value to use as the privateLinkServiceId parameter when creating the consumer deployment.
