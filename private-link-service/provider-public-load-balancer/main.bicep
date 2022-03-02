@@ -376,6 +376,9 @@ resource customScripts 'Microsoft.Compute/virtualMachines/extensions@2021-11-01'
 resource pls 'Microsoft.Network/privateLinkServices@2021-05-01' = {
   name: plsName
   location: location
+  dependsOn: [
+    loadBalancer
+  ]
   properties: {
     // TCP Proxy v2 protocol (https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)
     enableProxyProtocol: false

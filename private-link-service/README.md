@@ -26,8 +26,8 @@ Create a resource group for the Private Link Service (PLS).
 Create Azure Bastion for SSH access to private VMs, NAT Gateway for outbound access, Linux VMs behind an internal load balancer, install default nginx, and expose them via Azure Private Link Service.
 
 ```bash
-az group create --name rg-pls001 --location eastus2
-az deployment group create --resource-group rg-pls001 --template-file provider-internal-load-balancer/main.bicep --parameter vmSize=Standard_D2s_v5 instanceCount=2 authenticationType=password -o json --query "properties.outputs"
+az group create --name rg-pls002 --location eastus2
+az deployment group create --resource-group rg-pls002 --template-file provider-internal-load-balancer/main.bicep --parameter vmSize=Standard_D2s_v5 instanceCount=2 authenticationType=password -o json --query "properties.outputs"
 ```
 
 Optionally, connect to deployed VMs using [Azure Bastion native client](https://docs.microsoft.com/azure/bastion/connect-native-client-windows):
