@@ -11,7 +11,7 @@ Create a resource group for the Private Link Service (PLS).
 Create Linux VMs behind a public load balancer, install default nginx, and expose them via Azure Private Link Service.
 
 ```bash
-az group create --name rg-pls001 --location eastus2
+az group create --name rg-pls001 --location eastus
 az deployment group create --resource-group rg-pls001 --template-file provider-public-load-balancer/main.bicep --parameter vmSize=Standard_D2s_v5 instanceCount=2 authenticationType=password -o json --query "properties.outputs"
 ```
 
