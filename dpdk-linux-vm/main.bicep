@@ -11,9 +11,8 @@ param authenticationType string = 'sshPublicKey'
 @secure()
 param adminPasswordOrSshPublicKey string
 
-param vmSize string = 'Standard_L8s_v2'
+param vmSize string = 'Standard_L8s_v3'
 param location string = resourceGroup().location
-param zone string = '1'
 
 @minValue(1)
 @maxValue(100)
@@ -46,6 +45,7 @@ var nic1Name = 'nic1-${name}'
 var nic2Name = 'nic2-${name}'
 var vmName = 'vm${name}'
 var ppgName = 'ppg-${name}'
+var avsetName = 'avset-${name}'
 var diagStorageAccountName = 'diag${uniqueString(resourceGroup().id)}'
 
 var imageReference = {
@@ -70,6 +70,21 @@ resource ppg 'Microsoft.Compute/proximityPlacementGroups@2021-04-01' = {
   location: location
   properties: {
     proximityPlacementGroupType: 'Standard'
+  }
+}
+
+resource avset 'Microsoft.Compute/availabilitySets@2022-03-01' = {
+  name: avsetName
+  location: location
+  sku: {
+    name: 'Aligned'
+  }
+  properties: {
+    platformFaultDomainCount: 2
+    platformUpdateDomainCount: 20
+    proximityPlacementGroup: {
+      id: ppg.id
+    }
   }
 }
 
@@ -194,15 +209,12 @@ resource nics2 'Microsoft.Network/networkInterfaces@2021-02-01' = [for i in rang
 resource vms 'Microsoft.Compute/virtualMachines@2021-03-01' = [for i in range(0,instanceCount): {
   name: '${vmName}${i}'
   location: location
-  zones: [
-    zone
-  ]
   properties: {
     hardwareProfile: {
       vmSize: vmSize
     }
-    proximityPlacementGroup: {
-      id: ppg.id
+    availabilitySet: {
+      id: avset.id
     }
     storageProfile: {
       osDisk: {
