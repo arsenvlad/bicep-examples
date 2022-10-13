@@ -41,8 +41,12 @@ var subnet1Id = '${vnet.id}/subnets/${subnet1Name}'
 var subnet2Name = 'snet-2'
 var subnet2AddressPrefix = '10.0.2.0/24'
 var subnet2Id = '${vnet.id}/subnets/${subnet2Name}'
+var subnet3Name = 'snet-3'
+var subnet3AddressPrefix = '10.0.3.0/24'
+var subnet3Id = '${vnet.id}/subnets/${subnet3Name}'
 var nic1Name = 'nic1-${name}'
 var nic2Name = 'nic2-${name}'
+var nic3Name = 'nic3-${name}'
 var vmName = 'vm${name}'
 var ppgName = 'ppg-${name}'
 var avsetName = 'avset-${name}'
@@ -161,6 +165,15 @@ resource vnet 'Microsoft.Network/virtualNetworks@2021-02-01' = {
           }
         }
       }
+      {
+        name: subnet3Name
+        properties: {
+          addressPrefix: subnet3AddressPrefix
+          networkSecurityGroup: {
+            id: nsg.id
+          }
+        }
+      }
     ]
   }
 }
@@ -206,6 +219,25 @@ resource nics2 'Microsoft.Network/networkInterfaces@2021-02-01' = [for i in rang
   }
 }]
 
+resource nics3 'Microsoft.Network/networkInterfaces@2021-02-01' = [for i in range(0,instanceCount): {
+  name: '${nic3Name}${i}'
+  location: location
+  properties: {
+    enableAcceleratedNetworking: true
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          privateIPAllocationMethod: 'Dynamic'
+          subnet: {
+            id: subnet3Id
+          }
+        }
+      }
+    ]
+  }
+}]
+
 resource vms 'Microsoft.Compute/virtualMachines@2021-03-01' = [for i in range(0,instanceCount): {
   name: '${vmName}${i}'
   location: location
@@ -235,6 +267,12 @@ resource vms 'Microsoft.Compute/virtualMachines@2021-03-01' = [for i in range(0,
         }
         {
           id: nics2[i].id
+          properties: {
+            primary: false
+          }
+        }
+        {
+          id: nics3[i].id
           properties: {
             primary: false
           }

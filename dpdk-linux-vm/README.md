@@ -1,12 +1,12 @@
-# Azure VMs with 2 NICs in Placement Group
+# Azure VMs with 3 NICs in Placement Group
 
-This configuration is useful for experimenting with [DPDK in on Azure Linux VM](https://docs.microsoft.com/en-us/azure/virtual-network/setup-dpdk)
+This configuration is useful for experimenting with [DPDK in on Azure Linux VM](https://docs.microsoft.com/azure/virtual-network/setup-dpdk)
 
-Deploy VMs with 2 NICs in a [Placement Group](https://docs.microsoft.com/en-us/azure/virtual-machines/co-location).
+Deploy VMs with 3 NICs in a [Placement Group](https://docs.microsoft.com/azure/virtual-machines/co-location).
 
 ```bash
-az group create --name rg-ppg001 --location eastus2
-az deployment group create --resource-group rg-ppg001 --template-file main.bicep --parameter vmSize=Standard_L8s_v3 instanceCount=2 authenticationType=sshPublicKey -o json --query "properties.outputs"
+az group create --name rg-eastus --location eastus
+az deployment group create --resource-group rg-eastus --template-file main.bicep --parameter vmSize=Standard_L8s_v3 instanceCount=4 authenticationType=password -o json --query "properties.outputs"
 ```
 
 Network interfaces on the VMs
@@ -20,13 +20,13 @@ SSH into the VMs and install Linux perf tools and DPDK
 sudo apt-get install -y dstat iperf3 fio qperf sockperf
 ```
 
-Install DPDK (it is usually recommended to [compile from source](https://docs.microsoft.com/en-us/azure/virtual-network/setup-dpdk#compile-and-install-dpdk-manually), but for simple tests we can install via system package manager)
+Install DPDK (it is usually recommended to [compile from source](https://docs.microsoft.com/azure/virtual-network/setup-dpdk#compile-and-install-dpdk-manually), but for simple tests we can install via system package manager)
 
 ```bash
 sudo apt-get install -y dpdk dpdk-dev
 ```
 
-Configure the runtime environment as [documented](https://docs.microsoft.com/en-us/azure/virtual-network/setup-dpdk).
+Configure the runtime environment as [documented](https://docs.microsoft.com/azure/virtual-network/setup-dpdk).
 
 ```bash
 echo 1024 | sudo tee /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages
@@ -81,5 +81,5 @@ sudo dpdk-testpmd \
 Delete the deployed resource group
 
 ```bash
-az group delete --resource-group rg-ppg001
+az group delete --resource-group rg-eastus
 ```
