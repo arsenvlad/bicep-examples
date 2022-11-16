@@ -1,4 +1,6 @@
-param hostId string
+param dedicatedHostSku string
+param dedicatedHostCount int = 1
+
 param name string
 param adminUsername string = 'azureuser'
 
@@ -31,6 +33,9 @@ var linuxConfiguration = {
     ]
   }
 }
+
+var hostGroupName = 'dhg-${name}'
+var hostName = 'dh-${name}'
 var dnsLabelPrefix = '${name}-${uniqueString(resourceGroup().id)}'
 var pipName = 'pip-${name}'
 var nsgName = 'nsg-${name}'
@@ -58,6 +63,26 @@ var imageReference = {
 }
 
 // Resources
+resource hostGroup 'Microsoft.Compute/hostGroups@2022-08-01' = {
+  name: hostGroupName
+  location: location
+  properties: {
+    platformFaultDomainCount: 1
+    supportAutomaticPlacement: true
+  }
+}
+
+resource host 'Microsoft.Compute/hostGroups/hosts@2022-08-01' = [for i in range(0,dedicatedHostCount): {
+  name: '${hostGroup.name}/${hostName}${i}'
+  location: location
+  sku: {
+    name: dedicatedHostSku
+  }
+  properties: {
+    autoReplaceOnFailure: false
+  }
+}]
+
 resource diagStorageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   name: diagStorageAccountName
   location: location
@@ -222,12 +247,15 @@ resource nics3 'Microsoft.Network/networkInterfaces@2021-02-01' = [for i in rang
 resource vms 'Microsoft.Compute/virtualMachines@2021-03-01' = [for i in range(0,instanceCount): {
   name: '${vmName}${i}'
   location: location
+  dependsOn: [
+    host
+  ]
   properties: {
     hardwareProfile: {
       vmSize: vmSize
     }
-    host: {
-      id: hostId
+    hostGroup: {
+      id: hostGroup.id
     }
     storageProfile: {
       osDisk: {
