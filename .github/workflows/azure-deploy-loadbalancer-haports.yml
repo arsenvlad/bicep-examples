@@ -1,10 +1,6 @@
 name: azure-deploy-loadbalancer-haports
 on:
-    push:
-      paths:
-        - 'loadbalancer-haports/**'
-    schedule:
-      - cron: '5 18 * * 2' # Every week on Tuesday at 18:05
+  workflow_dispatch:
 jobs:
   loadbalancer-haports:
     runs-on: ubuntu-latest
