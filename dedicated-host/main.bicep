@@ -1,4 +1,4 @@
-// Parameters
+param hostId string
 param name string
 param adminUsername string = 'azureuser'
 
@@ -44,55 +44,20 @@ var subnet2AddressPrefix = '10.0.2.0/24'
 var subnet2Id = '${vnet.id}/subnets/${subnet2Name}'
 var subnet3Name = 'snet-3'
 var subnet3AddressPrefix = '10.0.3.0/24'
-var subnet3Id = '${vnet.id}/subnets/${subnet3Name}'
 var nic1Name = 'nic1-${name}'
 var nic2Name = 'nic2-${name}'
 var nic3Name = 'nic3-${name}'
 var vmName = 'vm${name}'
-var ppgName = 'ppg-${name}'
-var avsetName = 'avset-${name}'
 var diagStorageAccountName = 'diag${uniqueString(resourceGroup().id)}'
 
 var imageReference = {
   publisher: 'Canonical'
-  offer: '0001-com-ubuntu-server-focal'
-  sku: '20_04-lts'
-  version: 'latest'
+  offer: 'UbuntuServer'
+  sku: '18.04-LTS'
+  version: '18.04.202204190'
 }
-
-/*
-var imageReferenceCentOS = {
-  publisher: 'OpenLogic'
-  offer: 'CentOS'
-  sku: '8_4'
-  version: '8.4.2021071900'
-}
-*/
 
 // Resources
-resource ppg 'Microsoft.Compute/proximityPlacementGroups@2021-04-01' = {
-  name: ppgName
-  location: location
-  properties: {
-    proximityPlacementGroupType: 'Standard'
-  }
-}
-
-resource avset 'Microsoft.Compute/availabilitySets@2022-03-01' = {
-  name: avsetName
-  location: location
-  sku: {
-    name: 'Aligned'
-  }
-  properties: {
-    platformFaultDomainCount: 2
-    platformUpdateDomainCount: 20
-    proximityPlacementGroup: {
-      id: ppg.id
-    }
-  }
-}
-
 resource diagStorageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   name: diagStorageAccountName
   location: location
@@ -246,7 +211,7 @@ resource nics3 'Microsoft.Network/networkInterfaces@2021-02-01' = [for i in rang
         properties: {
           privateIPAllocationMethod: 'Dynamic'
           subnet: {
-            id: subnet3Id
+            id: subnet2Id
           }
         }
       }
@@ -261,14 +226,19 @@ resource vms 'Microsoft.Compute/virtualMachines@2021-03-01' = [for i in range(0,
     hardwareProfile: {
       vmSize: vmSize
     }
-    availabilitySet: {
-      id: avset.id
+    host: {
+      id: hostId
     }
     storageProfile: {
       osDisk: {
+        diskSizeGB: diskSize
         createOption: 'FromImage'
         managedDisk: {
-          storageAccountType: 'Premium_LRS'
+          storageAccountType: 'Standard_LRS'
+        }
+        diffDiskSettings: {
+          option: 'Local'
+          placement: 'ResourceDisk'
         }
       }
       imageReference: imageReference
@@ -310,6 +280,18 @@ resource vms 'Microsoft.Compute/virtualMachines@2021-03-01' = [for i in range(0,
   }
 }]
 
-// Outputs
-output fqdn array = [for i in range(0, instanceCount): pip[i].properties.dnsSettings.fqdn]
-output ip array = [for i in range(0, instanceCount): pip[i].properties.ipAddress]
+resource customScripts 'Microsoft.Compute/virtualMachines/extensions@2021-11-01' = [for i in range(0, instanceCount): {
+  name: 'customScript'
+  location: location
+  parent: vms[i]
+  properties: {
+    publisher: 'Microsoft.Azure.Extensions'
+    type: 'CustomScript'
+    typeHandlerVersion: '2.1'
+    autoUpgradeMinorVersion: true
+    settings: {
+      script: loadFileAsBase64('init.sh')
+    }
+  }
+}]
+
