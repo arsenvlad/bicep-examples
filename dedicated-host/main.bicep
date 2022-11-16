@@ -323,3 +323,6 @@ resource customScripts 'Microsoft.Compute/virtualMachines/extensions@2021-11-01'
   }
 }]
 
+// Outputs
+output fqdn array = [for i in range(0, instanceCount): pip[i].properties.dnsSettings.fqdn]
+output ip array = [for i in range(0, instanceCount): pip[i].properties.ipAddress]
