@@ -1,5 +1,6 @@
 param dedicatedHostSku string
 param dedicatedHostCount int = 1
+param zone int
 
 param name string
 param adminUsername string = 'azureuser'
@@ -66,6 +67,9 @@ var imageReference = {
 resource hostGroup 'Microsoft.Compute/hostGroups@2022-08-01' = {
   name: hostGroupName
   location: location
+  zones: [
+    string(zone)
+  ]
   properties: {
     platformFaultDomainCount: 1
     supportAutomaticPlacement: true
